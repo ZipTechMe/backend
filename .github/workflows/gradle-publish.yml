@@ -2,7 +2,7 @@ name: Java CI with Gradle and Kakao Alert and Version Bump
 
 on:
   push:
-    branches: ["main"]
+    branches: ["master"]
     paths-ignore:
       - '.env'  # .env만 바뀐 커밋은 무시하여 루프 방지
 
