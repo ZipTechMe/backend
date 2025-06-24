@@ -104,6 +104,7 @@ jobs:
             -e GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
             -e GOOGLE_SECRET=${{ secrets.GOOGLE_SECRET }} \
             -e GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }} \
+            -e SPRING_JPA_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect \
             -e SPRING_PROFILES_ACTIVE=server \
             --restart unless-stopped \
             -d -p 8080:8080 \
