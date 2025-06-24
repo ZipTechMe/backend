@@ -83,10 +83,16 @@ jobs:
           echo "DB_URL=$DB_URL"
           echo "DB_USERNAME=$DB_USERNAME"
           echo "DB_PASSWORD=$DB_PASSWORD"
+          echo "GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"
+          echo "GOOGLE_SECRET=$GOOGLE_SECRET"
+          echo "GOOGLE_REDIRECT_URI=$GOOGLE_REDIRECT_URI"
         env:
           DB_URL: ${{ secrets.DB_URL }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
+          GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
 
       - name: Run Docker Container
         run: |
@@ -95,6 +101,9 @@ jobs:
             -e DB_URL=${{ secrets.DB_URL }} \
             -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
             -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+            -e GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }} \
+            -e GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }} \
+            -e GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
             -e SPRING_PROFILES_ACTIVE=server \
             --restart unless-stopped \
             -d -p 8080:8080 \
