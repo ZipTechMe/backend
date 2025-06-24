@@ -1,0 +1,124 @@
+name: Java CI with Gradle and Kakao Alert and Version Bump
+
+on:
+  push:
+    branches: ["main"]
+    paths-ignore:
+      - '.env'  # .env만 바뀐 커밋은 무시하여 루프 방지
+
+permissions:
+  contents: write
+
+jobs:
+  build-docker-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Load IMAGE_TAG from .env
+        id: load_tag
+        run: |
+          TAG=$(grep IMAGE_TAG .env | cut -d '=' -f2)
+          echo "Loaded IMAGE_TAG: $TAG"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+      - name: Grant execute permission for Gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew clean bootJar
+
+      - name: Docker login
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Build Docker Image
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/auction_backend:${{ steps.load_tag.outputs.tag }} .
+
+      - name: Push Docker Image
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/auction_backend:${{ steps.load_tag.outputs.tag }}
+
+  run-docker-image-on-ec2:
+    needs: build-docker-image
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Load IMAGE_TAG from .env
+        id: load_tag
+        run: |
+          TAG=$(grep IMAGE_TAG .env | cut -d '=' -f2)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Docker login
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Pull Docker Image
+        run: docker pull ${{ secrets.DOCKERHUB_USERNAME }}/auction_backend:${{ steps.load_tag.outputs.tag }}
+
+      - name: Stop existing container (if exists)
+        run: |
+          if sudo docker ps -a --format '{{.Names}}' | grep -Eq '^auction_backend$'; then
+            echo "✅ Stopping existing container..."
+            sudo docker stop auction_backend || true
+            sudo docker rm auction_backend || true
+          else
+            echo "ℹ️ No existing container named 'auction_backend' found."
+          fi
+        continue-on-error: true
+
+      - name: Debug ENV
+        run: |
+          echo "DB_URL=$DB_URL"
+          echo "DB_USERNAME=$DB_USERNAME"
+          echo "DB_PASSWORD=$DB_PASSWORD"
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+
+      - name: Run Docker Container
+        run: |
+          sudo docker run \
+            --name auction_backend \
+            -e DB_URL=${{ secrets.DB_URL }} \
+            -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
+            -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+            -e SPRING_PROFILES_ACTIVE=server \
+            --restart unless-stopped \
+            -d -p 8080:8080 \
+            ${{ secrets.DOCKERHUB_USERNAME }}/auction_backend:${{ steps.load_tag.outputs.tag }}
+
+      - name: Delete Old Docker Images
+        run: sudo docker image prune -f
+
+      - name: Bump IMAGE_TAG in .env
+        if: success() && github.actor != 'github-actions[bot]'
+        run: |
+          file=".env"
+          if [ ! -f "$file" ]; then
+            echo ".env 파일이 존재하지 않습니다."
+            exit 1
+          fi
+
+          tag=$(grep IMAGE_TAG $file | cut -d '=' -f2)
+          new_tag=$((tag + 1))
+          echo "IMAGE_TAG=$new_tag" > $file
+          echo "Updated IMAGE_TAG to $new_tag"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .env
+          git commit -m "ci: bump IMAGE_TAG to $new_tag"
+          git push origin main
