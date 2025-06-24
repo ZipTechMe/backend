@@ -97,17 +97,17 @@ jobs:
       - name: Run Docker Container
         run: |
           sudo docker run \
-          --name auction_backend \
-          -e DB_URL=${{ secrets.DB_URL }} \
-          -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
-          -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-          -e GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
-          -e GOOGLE_SECRET=${{ secrets.GOOGLE_SECRET }} \
-          -e GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }} \
-          -e SPRING_PROFILES_ACTIVE=server \
-          --restart unless-stopped \
-          -d -p 8080:8080 \
-          ${{ secrets.DOCKERHUB_USERNAME }}/auction_backend:${{ steps.tag.outputs.tag }}
+            --name word_battle_backend \
+            -e DB_URL=${{ secrets.DB_URL }} \
+            -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
+            -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+            -e GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
+            -e GOOGLE_SECRET=${{ secrets.GOOGLE_SECRET }} \
+            -e GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }} \
+            -e SPRING_PROFILES_ACTIVE=server \
+            --restart unless-stopped \
+            -d -p 8080:8080 \
+            ${{ secrets.DOCKERHUB_USERNAME }}/word_battle_backend:${{ steps.load_tag.outputs.tag }}
 
       - name: Delete Old Docker Images
         run: sudo docker image prune -f
