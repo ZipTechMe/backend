@@ -1,6 +1,6 @@
 spring:
   application:
-    name: RealEstateAuction
+    name: zip_tech_backend
 
   datasource:
     url: ${DB_URL}
