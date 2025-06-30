@@ -40,10 +40,10 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Build Docker Image
-        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/auction_backend:${{ steps.load_tag.outputs.tag }} .
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/zip_tech_backend:${{ steps.load_tag.outputs.tag }} .
 
       - name: Push Docker Image
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/auction_backend:${{ steps.load_tag.outputs.tag }}
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/zip_tech_backend:${{ steps.load_tag.outputs.tag }}
 
   run-docker-image-on-ec2:
     needs: build-docker-image
@@ -65,16 +65,16 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Pull Docker Image
-        run: docker pull ${{ secrets.DOCKERHUB_USERNAME }}/auction_backend:${{ steps.load_tag.outputs.tag }}
+        run: docker pull ${{ secrets.DOCKERHUB_USERNAME }}/zip_tech_backend:${{ steps.load_tag.outputs.tag }}
 
       - name: Stop existing container (if exists)
         run: |
-          if sudo docker ps -a --format '{{.Names}}' | grep -Eq '^auction_backend$'; then
+          if sudo docker ps -a --format '{{.Names}}' | grep -Eq '^zip_tech_backend$'; then
             echo "✅ Stopping existing container..."
-            sudo docker stop auction_backend || true
-            sudo docker rm auction_backend || true
+            sudo docker stop zip_tech_backend || true
+            sudo docker rm zip_tech_backend || true
           else
-            echo "ℹ️ No existing container named 'auction_backend' found."
+            echo "ℹ️ No existing container named 'zip_tech_backend' found."
           fi
         continue-on-error: true
 
@@ -97,7 +97,7 @@ jobs:
       - name: Run Docker Container
         run: |
           sudo docker run \
-            --name auction_backend \
+            --name zip_tech_backend \
             -e DB_URL=${{ secrets.DB_URL }} \
             -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
             -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
@@ -106,9 +106,11 @@ jobs:
             -e GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }} \
             -e SPRING_JPA_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect \
             -e SPRING_PROFILES_ACTIVE=server \
+            -e SPRING_REDIS_HOST=redis \
+            --network zip_tech_net \
             --restart unless-stopped \
             -d -p 8080:8080 \
-            ${{ secrets.DOCKERHUB_USERNAME }}/auction_backend:${{ steps.load_tag.outputs.tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/zip_tech_backend:${{ steps.load_tag.outputs.tag }}
 
       - name: Delete Old Docker Images
         run: sudo docker image prune -f

@@ -3,7 +3,6 @@ package com.jybeomss1.realestateauction.jwt;
 import com.jybeomss1.realestateauction.common.exceptions.InvalidatedTokenException;
 import com.jybeomss1.realestateauction.common.exceptions.RevokedTokenException;
 import com.jybeomss1.realestateauction.user.adapter.out.persistence.RedisRefreshTokenRepository;
-import com.jybeomss1.realestateauction.user.application.port.out.UserPort;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +15,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Objects;
 
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -28,7 +28,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        String accessToken  = jwtTokenProvider.resolveToken(request.getHeader("Authorization"));
+        String uri = request.getRequestURI();
+
+        if (Objects.equals(uri, "/api/v1/user/login") || Objects.equals(uri, "/api/v1/user/join")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String accessToken = jwtTokenProvider.resolveToken(request.getHeader("Authorization"));
         String refreshToken = jwtTokenProvider.resolveRefreshToken(request.getHeader("X-Refresh-Token"));
 
         try {
