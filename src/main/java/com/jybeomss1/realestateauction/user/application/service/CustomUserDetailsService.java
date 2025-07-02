@@ -1,6 +1,7 @@
 package com.jybeomss1.realestateauction.user.application.service;
 
-import com.jybeomss1.realestateauction.common.exceptions.NotFoundUserException;
+import com.jybeomss1.realestateauction.common.exceptions.BaseException;
+import com.jybeomss1.realestateauction.common.exceptions.ErrorCode;
 import com.jybeomss1.realestateauction.user.application.port.out.UserPort;
 import com.jybeomss1.realestateauction.user.domain.User;
 import com.jybeomss1.realestateauction.user.domain.dto.CustomUserDetails;
@@ -18,7 +19,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String email) {
         User user = userPort.findByEmail(email)
-                .orElseThrow(NotFoundUserException::new);
+                .orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND_USER));
         return new CustomUserDetails(user);
     }
 }

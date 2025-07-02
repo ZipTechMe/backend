@@ -2,8 +2,6 @@ package com.jybeomss1.realestateauction.jwt;
 
 import com.jybeomss1.realestateauction.common.exceptions.BaseException;
 import com.jybeomss1.realestateauction.common.exceptions.ErrorCode;
-import com.jybeomss1.realestateauction.common.exceptions.InvalidatedTokenException;
-import com.jybeomss1.realestateauction.common.exceptions.RevokedTokenException;
 import com.jybeomss1.realestateauction.user.adapter.out.persistence.RedisRefreshTokenRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,7 +17,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 @RequiredArgsConstructor
