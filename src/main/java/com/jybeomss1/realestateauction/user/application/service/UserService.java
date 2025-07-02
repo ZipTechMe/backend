@@ -1,73 +1,66 @@
 package com.jybeomss1.realestateauction.user.application.service;
 
 
-import com.jybeomss1.realestateauction.common.exceptions.ExistUserException;
-import com.jybeomss1.realestateauction.common.exceptions.NotFoundUserException;
+import com.jybeomss1.realestateauction.common.exceptions.BaseException;
+import com.jybeomss1.realestateauction.common.exceptions.ErrorCode;
 import com.jybeomss1.realestateauction.jwt.JwtTokenProvider;
 import com.jybeomss1.realestateauction.user.adapter.out.persistence.RedisRefreshTokenRepository;
 import com.jybeomss1.realestateauction.user.application.port.in.UserJoinUseCase;
 import com.jybeomss1.realestateauction.user.application.port.in.UserLoginUseCase;
 import com.jybeomss1.realestateauction.user.application.port.in.UserLogoutUseCase;
 import com.jybeomss1.realestateauction.user.application.port.out.UserPort;
-import com.jybeomss1.realestateauction.user.domain.User;
 import com.jybeomss1.realestateauction.user.domain.dto.CustomUserDetails;
 import com.jybeomss1.realestateauction.user.domain.dto.UserJoinRequest;
 import com.jybeomss1.realestateauction.user.domain.dto.response.TokenResponse;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
-public class UserService implements UserJoinUseCase, UserLoginUseCase, UserLogoutUseCase, UserDetailsService {
+@Slf4j
+public class UserService implements UserJoinUseCase, UserLoginUseCase, UserLogoutUseCase {
     private final UserPort userPort;
-    private final AuthenticationConfiguration authenticationConfiguration;
+    private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
-    private final RedisRefreshTokenRepository  redisRefreshTokenRepository;
+    private final RedisRefreshTokenRepository redisRefreshTokenRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
+    @Transactional
     public void join(UserJoinRequest request) {
-        Optional<User> existedUser = userPort.findByEmail(request.getEmail());
-        if (existedUser.isPresent()) {
-            throw new ExistUserException();
+        if (userPort.findByEmail(request.getEmail()).isPresent()) {
+            log.warn("이미 존재하는 이메일로 회원가입 시도: {}", request.getEmail());
+            throw new BaseException(ErrorCode.EXIST_USER);
         }
 
-        userPort.save(request.getEmail(), request.getName(), request.getPassword());
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
+        userPort.save(request.getEmail(), request.getName(), encodedPassword);
+        log.info("회원가입 성공: {}", request.getEmail());
     }
 
     @Override
     public TokenResponse login(String email, String password) {
-        AuthenticationManager authenticationManager;
-        try {
-            authenticationManager = authenticationConfiguration.getAuthenticationManager();
-        } catch (Exception e) {
-            throw new RuntimeException("인증 매니저 가져오기 실패", e);
-        }
-
-        Authentication authenticate = authenticationManager.authenticate(
+        Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(email, password)
         );
-
-        CustomUserDetails userDetail = (CustomUserDetails) authenticate.getPrincipal();
-        String userId = userDetail.getUserId();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        String userId = userDetails.getUserId().toString();
 
         String accessToken = jwtTokenProvider.createAccessToken(userId);
         String refreshToken = jwtTokenProvider.createRefreshToken(userId);
 
         jwtTokenProvider.saveRefreshToken(userId, refreshToken);
-
+        log.info("로그인 성공: {}", email);
         return new TokenResponse(accessToken, refreshToken);
     }
 
@@ -89,11 +82,6 @@ public class UserService implements UserJoinUseCase, UserLoginUseCase, UserLogou
         }
 
         redisRefreshTokenRepository.delete(userId);
-    }
-
-    @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userPort.findByEmail(email).orElseThrow(NotFoundUserException::new);
-        return new CustomUserDetails(user);
+        log.info("로그아웃 성공: {}", userId);
     }
 }

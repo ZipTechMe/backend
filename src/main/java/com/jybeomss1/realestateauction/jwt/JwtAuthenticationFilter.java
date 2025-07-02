@@ -1,5 +1,7 @@
 package com.jybeomss1.realestateauction.jwt;
 
+import com.jybeomss1.realestateauction.common.exceptions.BaseException;
+import com.jybeomss1.realestateauction.common.exceptions.ErrorCode;
 import com.jybeomss1.realestateauction.common.exceptions.InvalidatedTokenException;
 import com.jybeomss1.realestateauction.common.exceptions.RevokedTokenException;
 import com.jybeomss1.realestateauction.user.adapter.out.persistence.RedisRefreshTokenRepository;
@@ -12,16 +14,37 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
     private final RedisRefreshTokenRepository redisRefreshTokenRepository;
+    private static final Set<String> PERMIT_ALL_URIS = Set.of(
+            "/api/v1/user/login",
+            "/api/v1/user/join",
+            "/swagger-ui.html",
+            "/api-docs",
+            "/.well-known/appspecific/com.chrome.devtools.json"
+    );
+
+    private static final List<String> PERMIT_ALL_PATTERNS = List.of(
+            "/swagger-ui/**",
+            "/api-docs/**",
+            "/swagger-resources/**",
+            "/webjars/**",
+            "/api/v1/oauth2/authorize/**",
+            "/api/v1/oauth2/callback/**"
+    );
+
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -30,7 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String uri = request.getRequestURI();
 
-        if (Objects.equals(uri, "/api/v1/user/login") || Objects.equals(uri, "/api/v1/user/join")) {
+        if (isPermitAllUri(uri)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -43,7 +66,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // 토큰이 블랙리스트에 올라가 있는지 먼저 확인
                 String jti = jwtTokenProvider.getJti(accessToken);
                 if (redisRefreshTokenRepository.getKey("blacklist:" + jti)) {
-                    throw new RevokedTokenException();
+                    throw new BaseException(ErrorCode.REVOKED_TOKEN);
                 }
 
                 // 블랙리스트가 아니면 정상 인증
@@ -59,7 +82,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     response.setHeader("Authorization", "Bearer " + newAccessToken);
                     authenticate(userId);
                 } else {
-                    throw new InvalidatedTokenException();
+                    throw new BaseException(ErrorCode.INVALID_TOKEN);
                 }
             }
         } catch (Exception e) {
@@ -78,5 +101,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         UsernamePasswordAuthenticationToken auth =
                 new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    private boolean isPermitAllUri(String uri) {
+        if (PERMIT_ALL_URIS.contains(uri)) return true;
+        return PERMIT_ALL_PATTERNS.stream().anyMatch(pattern -> pathMatcher.match(pattern, uri));
     }
 }
