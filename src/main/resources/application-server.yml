@@ -57,5 +57,5 @@ springdoc:
     tags-sorter: alpha
 
 cors:
-  allowed-origin: ${ALLOWED_ORIGIN}
+  allowed-origin-ip: ${ALLOWED_ORIGIN_IP}
 
