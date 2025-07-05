@@ -56,3 +56,6 @@ springdoc:
     operations-sorter: method
     tags-sorter: alpha
 
+cors:
+  allowed-origin: ${ALLOWED_ORIGIN}
+
