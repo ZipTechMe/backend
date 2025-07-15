@@ -1,5 +1,6 @@
 package com.jybeomss1.realestateauction.user.domain.dto;
 
+import com.jybeomss1.realestateauction.user.domain.UserGrade;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -7,8 +8,6 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class UserJoinRequest {
-    private String email;
-    private String name;
-    private String password;
-}
+public class UserGradeUpgradeRequest {
+    private UserGrade userGrade;
+} 

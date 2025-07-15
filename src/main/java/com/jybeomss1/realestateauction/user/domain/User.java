@@ -13,6 +13,7 @@ public class User {
     private final String password;
     private final String socialType;
     private final String socialId;
+    private final UserGrade userGrade;
     private final LocalDateTime createdDate;
     private final LocalDateTime modifiedDate;
     private final boolean deleted;
@@ -24,6 +25,7 @@ public class User {
         this.password = userJpaEntity.getPassword();
         this.socialType = userJpaEntity.getSocialType();
         this.socialId = userJpaEntity.getSocialId();
+        this.userGrade = userJpaEntity.getUserGrade();
         this.createdDate = userJpaEntity.getCreatedDate();
         this.modifiedDate = userJpaEntity.getModifiedDate();
         this.deleted = userJpaEntity.isDeleted();

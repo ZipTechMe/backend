@@ -2,6 +2,7 @@ package com.jybeomss1.realestateauction.oauth.application.service;
 
 import com.jybeomss1.realestateauction.user.adapter.out.persistence.UserJpaEntity;
 import com.jybeomss1.realestateauction.user.adapter.out.persistence.UserJpaRepository;
+import com.jybeomss1.realestateauction.user.domain.UserGrade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -31,6 +32,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
                                 .builder()
                                 .email(email)
                                 .name(oAuth2User.getAttribute("name"))
+                                .userGrade(UserGrade.LITE)
                                 .build()
                 ));
 

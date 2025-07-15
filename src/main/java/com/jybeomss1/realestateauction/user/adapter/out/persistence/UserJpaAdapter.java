@@ -1,8 +1,12 @@
 package com.jybeomss1.realestateauction.user.adapter.out.persistence;
 
+import com.jybeomss1.realestateauction.common.exceptions.BaseException;
+import com.jybeomss1.realestateauction.common.exceptions.ErrorCode;
 import com.jybeomss1.realestateauction.user.application.port.out.UserPort;
 import com.jybeomss1.realestateauction.user.domain.User;
+import com.jybeomss1.realestateauction.user.domain.UserGrade;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -30,4 +34,11 @@ public class UserJpaAdapter implements UserPort {
         userJpaRepository.save(new UserJpaEntity(email, name, password));
     }
 
+    @Override
+    public void updateUserGrade(String userId, UserGrade userGrade) {
+        UserJpaEntity userJpaEntity = userJpaRepository.findById(UUID.fromString(userId))
+                .orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND_USER));
+        userJpaEntity.upgradeGrade(userGrade);
+        userJpaRepository.save(userJpaEntity);
+    }
 }

@@ -2,6 +2,7 @@ package com.jybeomss1.realestateauction.user.adapter.out.persistence;
 
 import com.jybeomss1.realestateauction.common.util.BaseTimeEntity;
 import com.jybeomss1.realestateauction.user.domain.User;
+import com.jybeomss1.realestateauction.user.domain.UserGrade;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -34,12 +35,19 @@ public class UserJpaEntity extends BaseTimeEntity {
     @Column(name = "social_id")
     private String socialId;
 
+    @Column(name = "user_grade", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private UserGrade userGrade;
+
     @Column(nullable = false)
     private boolean deleted;
 
     @PrePersist
     public void prePersist() {
         this.deleted = false;
+        if (this.userGrade == null) {
+            this.userGrade = UserGrade.LITE;
+        }
     }
 
     public User toDto() {
@@ -50,5 +58,10 @@ public class UserJpaEntity extends BaseTimeEntity {
         this.email = email;
         this.name = name;
         this.password = password;
+        this.userGrade = UserGrade.LITE;
+    }
+
+    public void upgradeGrade(UserGrade newGrade) {
+        this.userGrade = newGrade;
     }
 }

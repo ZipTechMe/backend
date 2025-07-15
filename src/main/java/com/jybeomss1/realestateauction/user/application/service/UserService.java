@@ -5,11 +5,14 @@ import com.jybeomss1.realestateauction.common.exceptions.BaseException;
 import com.jybeomss1.realestateauction.common.exceptions.ErrorCode;
 import com.jybeomss1.realestateauction.jwt.JwtTokenProvider;
 import com.jybeomss1.realestateauction.user.adapter.out.persistence.RedisRefreshTokenRepository;
+import com.jybeomss1.realestateauction.user.application.port.in.UserGradeUpgradeUseCase;
 import com.jybeomss1.realestateauction.user.application.port.in.UserJoinUseCase;
 import com.jybeomss1.realestateauction.user.application.port.in.UserLoginUseCase;
 import com.jybeomss1.realestateauction.user.application.port.in.UserLogoutUseCase;
 import com.jybeomss1.realestateauction.user.application.port.out.UserPort;
+import com.jybeomss1.realestateauction.user.domain.UserGrade;
 import com.jybeomss1.realestateauction.user.domain.dto.CustomUserDetails;
+import com.jybeomss1.realestateauction.user.domain.dto.UserGradeUpgradeRequest;
 import com.jybeomss1.realestateauction.user.domain.dto.UserJoinRequest;
 import com.jybeomss1.realestateauction.user.domain.dto.response.TokenResponse;
 import io.jsonwebtoken.Jwts;
@@ -28,7 +31,7 @@ import java.util.Date;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class UserService implements UserJoinUseCase, UserLoginUseCase, UserLogoutUseCase {
+public class UserService implements UserJoinUseCase, UserLoginUseCase, UserLogoutUseCase, UserGradeUpgradeUseCase {
     private final UserPort userPort;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
@@ -54,7 +57,7 @@ public class UserService implements UserJoinUseCase, UserLoginUseCase, UserLogou
                 new UsernamePasswordAuthenticationToken(email, password)
         );
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        String userId = userDetails.getUserId().toString();
+        String userId = userDetails.getUserId();
 
         String accessToken = jwtTokenProvider.createAccessToken(userId);
         String refreshToken = jwtTokenProvider.createRefreshToken(userId);
@@ -83,5 +86,21 @@ public class UserService implements UserJoinUseCase, UserLoginUseCase, UserLogou
 
         redisRefreshTokenRepository.delete(userId);
         log.info("로그아웃 성공: {}", userId);
+    }
+
+    @Override
+    @Transactional
+    public void upgradeGrade(String userId, UserGradeUpgradeRequest request) {
+        userPort.findByUserId(userId)
+                .orElseThrow(() -> new BaseException(ErrorCode.NOT_FOUND_USER));
+
+        // 등급 변경 가능: LITE, PRO
+        if (request.getUserGrade() == UserGrade.LITE || request.getUserGrade() == UserGrade.PRO) {
+            userPort.updateUserGrade(userId, request.getUserGrade());
+            log.info("사용자 등급 변경 성공: userId={}, newGrade={}", userId, request.getUserGrade());
+        } else {
+            log.warn("유효하지 않은 등급 변경 시도: userId={}, requestedGrade={}", userId, request.getUserGrade());
+            throw new BaseException(ErrorCode.INVALID_GRADE_UPGRADE);
+        }
     }
 }
